@@ -592,17 +592,17 @@ End Sub
 
 Sub T_R_Wstawianie_długości()
 
-If MsgBox("Długości zapisać w calach? (jeśli nie w cale to milimetry)", vbYesNo) = vbYes Then
-    dzielnik = 25.4
-Else
-    dzielnik = 1
-End If
-
 For i = 1 To Sheets.Count - 1
     
     Sheets(i).Activate
     r_end = Cells(3, 2).End(xlDown).Row
 
+    If InStr(Range("AC3").Value, "NON") > 0 Then
+        dzielnik = 25.4
+    Else
+        dzielnik = 1
+    End If
+    
     For Each kom In Range(Cells(3, 7), Cells(r_end, 7))
         If kom.Interior.Color = vbYellow Then
             kom.Value = Cells(kom.Row, 23).Value / dzielnik
