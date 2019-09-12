@@ -606,13 +606,13 @@ For i = 1 To Sheets.Count - 1
     For Each kom In Range(Cells(3, 7), Cells(r_end, 7))
         If kom.Interior.Color = vbYellow Then
             kom.Value = Cells(kom.Row, 23).Value / dzielnik
-            Cells(kom.Row, kom.Column + 1).Value = kom.Value
-            kom.Interior.Color = xlNone
+            Cells(kom.Row, kom.Column + 1).Value = kom.Value 'sąsiednią długość robimy taką samą - są identyczne
+            kom.Interior.Color = xlNone 'usuwamy oznaczenie kolorem
         End If
         
         If Cells(kom.Row, kom.Column + 2).Interior.Color = vbYellow Then
             Cells(kom.Row, kom.Column + 2).Value = Cells(kom.Row, 24).Value / dzielnik
-            Cells(kom.Row, kom.Column + 2).Interior.Color = xlNone
+            Cells(kom.Row, kom.Column + 2).Interior.Color = xlNone 'usuwamy oznaczenie kolorem
         End If
         
     Next kom
