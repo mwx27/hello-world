@@ -607,12 +607,12 @@ For i = 1 To Sheets.Count - 1
         If kom.Interior.Color = vbYellow Then
             kom.Value = Cells(kom.Row, 23).Value / dzielnik
             Cells(kom.Row, kom.Column + 1).Value = kom.Value
-            kom.interior.color=xlnone
+            kom.Interior.Color = xlNone
         End If
         
         If Cells(kom.Row, kom.Column + 2).Interior.Color = vbYellow Then
             Cells(kom.Row, kom.Column + 2).Value = Cells(kom.Row, 24).Value / dzielnik
-            Cells(kom.Row, kom.Column + 2).interior.color=xlnone
+            Cells(kom.Row, kom.Column + 2).Interior.Color = xlNone
         End If
         
     Next kom
@@ -643,4 +643,6 @@ Sheets(1).Activate
 
 Application.ScreenUpdating = True
 End Sub
+
+
 
