@@ -1,0 +1,645 @@
+Option Explicit
+Dim adres_formuły1 As Range
+Dim adres_formuły2 As Range
+Dim adres_formuły3 As Range
+Dim adres_formuły4 As Range
+Dim adres_formuły5 As Range
+Dim adres_formuły6 As Range
+Dim adres_formuły7 As Range
+Dim r_end As Integer
+Dim c1 As Integer
+Dim c2 As Integer
+Dim c3 As Integer
+Dim c4 As Integer
+Dim c5 As Integer
+Dim c6 As Integer
+Dim c7 As Integer
+Dim adres As String
+Dim kom As Range
+Dim Licznik_TP As Integer
+Dim Licznik1 As Integer
+Dim Licznik2 As Integer
+Dim Licznik3 As Integer
+Dim Licznik4 As Integer
+Dim i As Integer
+Dim Suma_TP As Integer
+Dim Suma1 As Integer
+Dim Suma2 As Integer
+Dim Suma3 As Integer
+Dim Suma4 As Integer
+Dim Suma5 As Integer
+'Public Nazwa_Arkusza As String
+Public Arkusz_Główny As String
+Dim Typ_kształtki As String
+Dim Norma As String
+Dim Materiał As String
+Dim Klasa_materiałowa As String
+Dim Opis As String
+Dim Grubości_ścianek As String
+'wyszukaj_zakres_dla_NON-STD:
+Dim rng_columns As Range
+Dim rng_rows As Range
+Dim rng_rows_columns As Range
+Dim L1_rng_columns As Range
+Dim L1_rng_rows As Range
+Dim L1_rng_rows_columns As Range
+Dim L3_rng_columns As Range
+Dim L3_rng_rows As Range
+Dim L3_rng_rows_columns As Range
+Dim kom1 As Range
+Dim kom2 As Range
+Dim kom3 As Range
+Dim D1 As String
+Dim D2 As String
+Dim Znalezione As Boolean
+Dim Opuść_for_1 As Boolean
+Dim Licznik5 As Integer
+'T_R_Wstawianie_długości
+Dim dzielnik As Single
+
+
+Sub opisy()
+Range("Q2") = "grubość 1"
+Range("R2") = "grubość 2"
+Range("S2") = "długość zwężki"
+Range("T2") = "średnice w normach?"
+Range("U2") = "średnice w klasach?"
+End Sub
+
+
+Sub T_R_main()
+
+Application.DecimalSeparator = "."
+Application.UseSystemSeparators = False
+
+Element = "T_R"
+Nazwa_Arkusza = ""
+Arkusz_Główny = ThisWorkbook.Name
+UserForm1.Show
+If Nazwa_Arkusza = "" Then Exit Sub
+Workbooks(Nazwa_Arkusza).Activate
+
+Application.ScreenUpdating = False
+
+Suma_TP = 0 'niezgodność z trójkątem połączeń
+Suma1 = 0 'niezgodność średnic z klasami
+Suma2 = 0 'niezgodność średnic z normami
+Suma3 = 0 'niezgodność materiałów z klasami
+Suma4 = 0 'niezgodność długości z normami
+Suma5 = 0 'brakujące średnice zwężek w bazie planta
+
+For i = 1 To Sheets.Count - 1
+    
+    Sheets(i).Activate
+
+        T_R_weryfikacja_średnic
+        Suma_TP = Suma_TP + Licznik_TP
+        Suma1 = Suma1 + Licznik1
+        Suma2 = Suma2 + Licznik2
+        Suma3 = Suma3 + Licznik3
+        Suma4 = Suma4 + Licznik4
+
+Next i
+
+
+Sheets(1).Activate
+MsgBox "Niezgodność z trójkątem połączeń: " & Suma_TP & Chr(10) & "Niezgodność średnic z klasami: " & Suma1 & Chr(10) & "Niezgodność średnic z normami: " & Suma2 _
+& Chr(10) & "Niezgodność materiałów z klasami: " & Suma3 & Chr(10) & "Niezgodność długości z normami: " & Suma4 & Chr(10) & "Liczba kształtek do ręcznego wprowadzenia do planta: " & Suma5
+
+'wstawianie poprawnych długości trójnika na życzenie
+If Suma4 > 0 Then
+    If MsgBox("Wprowadzić właściwe długości trójnika?", vbYesNo) = vbYes Then
+        T_R_Wstawianie_długości
+    End If
+End If
+
+If MsgBox("Usunąć śmiecie?", vbYesNo) = vbYes Then
+    T_R_usuwanie_śmieci
+    If MsgBox("Nadpisać arkusz?", vbYesNo) = vbYes Then ActiveWorkbook.SaveAs Filename:=Replace(ActiveWorkbook.Path & "\" & ActiveWorkbook.Name, ".xls", "_READY.xls"), FileFormat:=xlExcel8
+End If
+
+Application.ScreenUpdating = True
+
+End Sub
+
+
+
+Sub T_R_weryfikacja_średnic()
+
+Set adres_formuły1 = Range("T3") 'Element w trójkącie połączeń
+Set adres_formuły2 = Range("U3") 'Obecność średnic w klasach materiałowych
+Set adres_formuły3 = Range("V3") 'Obecność średnic w normie MSS/ASME/VENDOR"
+Set adres_formuły4 = Range("W3") 'Długość C
+Set adres_formuły5 = Range("X3") 'Długość M
+Set adres_formuły6 = Range("AH3") 'Grubość ścianki głównej według klasy materiałowej"
+Set adres_formuły7 = Range("AI3") 'Grubość ścianki bocznej według klasy materiałowej
+
+On Error Resume Next
+    adres_formuły1.AddComment
+    adres_formuły2.AddComment
+    adres_formuły3.AddComment
+    adres_formuły4.AddComment
+    adres_formuły5.AddComment
+    adres_formuły6.AddComment
+    adres_formuły7.AddComment
+On Error GoTo 0
+
+c1 = adres_formuły1.Column
+c2 = adres_formuły2.Column
+c3 = adres_formuły3.Column
+c4 = adres_formuły4.Column
+c5 = adres_formuły5.Column
+c6 = adres_formuły6.Column
+c7 = adres_formuły7.Column
+r_end = Cells(3, 2).End(xlDown).Row
+
+Licznik_TP = 0
+Licznik1 = 0
+Licznik2 = 0
+Licznik3 = 0
+Licznik4 = 0
+
+ActiveSheet.Unprotect
+
+Columns(2).Interior.Color = xlNone
+
+'===========================================================================================
+'rozpoznanie typu kształtki, normy, klasy materiałowej, materiału
+'===========================================================================================
+
+Typ_kształtki = "TEE (RED)"
+
+If InStr(Range("BG3").Value, "MSS") > 0 Then Norma = "MSS SP-75"
+If InStr(Range("BG3").Value, "ASME") > 0 Then Norma = "ASME 16.9"
+If InStr(Range("BG3").Value, "NON") > 0 Then Norma = "MANUFACTURER STD"
+Klasa_materiałowa = Range("BI3").Characters(7, 4).Text
+Range("S3") = Klasa_materiałowa
+Range("S4").Formula = "=INDEX([" & Arkusz_Główny & "]klasy!M12:S12,1,MATCH(S3,[" & Arkusz_Główny & "]klasy!M7:S7,0))"
+
+Materiał = Range("S4").Value
+
+'===========================================================================================
+'zamiana średnic nominalnych i długości na format liczbowy
+'===========================================================================================
+For Each kom In Range(Cells(3, 15), Cells(r_end, 15))
+    kom = CSng(Replace(kom.Value, ".", ","))
+Next kom
+
+For Each kom In Range(Cells(3, 30), Cells(r_end, 30))
+   kom = CSng(Replace(kom.Value, ".", ","))
+Next kom
+
+For Each kom In Range(Cells(3, 45), Cells(r_end, 45))
+   kom = CSng(Replace(kom.Value, ".", ","))
+Next kom
+
+For Each kom In Range(Cells(3, 7), Cells(r_end, 9))
+   kom = CSng(Replace(kom.Value, ".", ","))
+Next kom
+
+'===========================================================================================
+'zamiana błędnych średnic na właściwe
+'===========================================================================================
+Application.DisplayAlerts = False
+With Range(Cells(3, 15), Cells(r_end, 15))
+    .Replace What:="1450", Replacement:="58"
+    .Replace What:="1550", Replacement:="62"
+    .Replace What:="1750", Replacement:="70"
+    .Replace What:="2300", Replacement:="92"
+    .Replace What:="2500", Replacement:="100"
+End With
+With Range(Cells(3, 30), Cells(r_end, 30))
+    .Replace What:="1450", Replacement:="58"
+    .Replace What:="1550", Replacement:="62"
+    .Replace What:="1750", Replacement:="70"
+    .Replace What:="2300", Replacement:="92"
+    .Replace What:="2500", Replacement:="100"
+End With
+With Range(Cells(3, 45), Cells(r_end, 45))
+    .Replace What:="1450", Replacement:="58"
+    .Replace What:="1550", Replacement:="62"
+    .Replace What:="1750", Replacement:="70"
+    .Replace What:="2300", Replacement:="92"
+    .Replace What:="2500", Replacement:="100"
+End With
+Application.DisplayAlerts = True
+
+'===========================================================================================
+'wstawianie formuł weryfikacyjnych
+'===========================================================================================
+
+
+
+'wstawianie formuły sprawdzającej rodzaj kształtki w trójkącie połączeń
+adres_formuły1.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójkąt_połączeń!$D$4:$AI$35,MATCH(O3,[" & Arkusz_Główny & "]trójkąt_połączeń!$C$4:$C$35,0),MATCH(AS3,[" & Arkusz_Główny & "]trójkąt_połączeń!$D$36:$AI$36,0)),""brak w trójkącie połączeń"")"
+adres_formuły1.Comment.Text ("Element w trójkącie połączeń")
+
+'wstawianie formuły sprawdzającej obecność średnicy w klasach materiałowych
+adres_formuły2.Formula = "=AND(IFERROR(IF(MATCH(" & "O3,[" & Arkusz_Główny & "]klasy!$B$7:$B$43,0),1),0),IFERROR(IF(MATCH(AS3,[" & Arkusz_Główny & "]klasy!$B$7:$B$43,0),1),0))"
+adres_formuły2.Comment.Text ("Obecność średnic w klasach materiałowych")
+
+'trzecią formułą jest sprawdzanie obecności średnic w normach MSS-SP-75 lub ASME 16.9 lub w standardzie wytwórcy
+'czwartą i piątą formułą jest znajdowanie długości trójnika
+If InStr(Range("BG3").Value, "MSS") > 0 Then
+    adres_formuły3.Formula = "=IF(IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!$D$6:$AD$28,MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$C$6:$C$28,0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$D$5:$AD$5,0)),0)>0,TRUE)"
+    adres_formuły4.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!$D$6:$AD$28,MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$C$6:$C$28,0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$D$5:$AD$5,0)),0)"
+    adres_formuły5.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!$D$35:$AD$57,MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$C$35:$C$57,0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$D$34:$AD$34,0)),0)"
+    adres_formuły3.Comment.Text ("Obecność średnic w MSS")
+    adres_formuły4.Comment.Text ("Długość C według MSS")
+    adres_formuły5.Comment.Text ("Długość M według MSS")
+ElseIf InStr(Range("BG3").Value, "ASME") > 0 Then
+    adres_formuły3.Formula = "=IF(IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!$AH$6:$BO$38,MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$AG$6:$AG$38,0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$AH$5:$BO$5,0)),0)>0,TRUE)"
+    adres_formuły4.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!$AH$6:$BO$38,MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$AG$6:$AG$38,0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$AH$5:$BO$5,0)),0)"
+    adres_formuły5.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!$AH$45:$BO$77,MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$AG$45:$AG$77,0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!$AH$44:$BO$44,0)),0)"
+    adres_formuły3.Comment.Text ("Obecność średnic w ASME")
+    adres_formuły4.Comment.Text ("Długość C według ASME")
+    adres_formuły5.Comment.Text ("Długość M według ASME")
+ElseIf InStr(Range("BG3").Value, "NON") > 0 Then
+    'najpierw wyszukujemy zakres formuł weryfikacyjnych dla właściwej klasy i właściwego rodzaju trójnika
+    'przy okazji sprawdzamy czy nam nie brakuje w arkuszu planta żadnych kombinacji średnic rng_rows_columns.address
+    TR_wyszukaj_zakres_dla_NON_STD
+    adres_formuły3.Formula = "=IF(IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!" & L1_rng_rows_columns.Address & ",MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!" & L1_rng_rows.Address & ",0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!" & L1_rng_columns.Address & ",0)),0)>0,TRUE)"
+    adres_formuły4.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!" & L1_rng_rows_columns.Address & ",MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!" & L1_rng_rows.Address & ",0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!" & L1_rng_columns.Address & ",0)),0)"
+    adres_formuły5.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]trójniki_redukcyjne!" & L3_rng_rows_columns.Address & ",MATCH(O3,[" & Arkusz_Główny & "]trójniki_redukcyjne!" & L3_rng_rows.Address & ",0),MATCH(AS3,[" & Arkusz_Główny & "]trójniki_redukcyjne!" & L3_rng_columns.Address & ",0)),0)"
+    adres_formuły3.Comment.Text ("Obecność średnic w kartach producenta")
+    adres_formuły4.Comment.Text ("Długość C według" & Chr(10) & "90-YB40-H-606_1")
+    adres_formuły5.Comment.Text ("Długość M według" & Chr(10) & "90-YB40-H-606_1")
+    Suma5 = Suma5 + Licznik5
+    
+End If
+
+
+'wstawianie formuły znajdującej grubość ścianki dla danej średnicy i klasy materiałowej
+'średnica 1
+adres_formuły6.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]klasy!$D$7:$J$43,MATCH(O3,[" & Arkusz_Główny & "]klasy!$B$7:$B$43,0),MATCH($S$3,[" & Arkusz_Główny & "]klasy!$D$6:$J$6,0)),""brak średnicy w klasie"")"
+adres_formuły6.Comment.Text ("Grubość ścianki głównej według klasy materiałowej")
+
+'średnica3
+adres_formuły7.Formula = "=IFERROR(INDEX([" & Arkusz_Główny & "]klasy!$D$7:$J$43,MATCH(O3,[" & Arkusz_Główny & "]klasy!$B$7:$B$43,0),MATCH($S$3,[" & Arkusz_Główny & "]klasy!$D$6:$J$6,0)),""brak średnicy w klasie"")"
+adres_formuły7.Comment.Text ("Grubość ścianki bocznej według klasy materiałowej")
+
+'przeciąganie formuł
+adres = Range(Cells(3, c1), Cells(r_end, c5)).Address
+Range(adres_formuły1, adres_formuły5).AutoFill Destination:=Range(adres), Type:=xlFillValues
+adres = Range(Cells(3, c6), Cells(r_end, c7)).Address
+Range(adres_formuły6, adres_formuły7).AutoFill Destination:=Range(adres), Type:=xlFillValues
+
+'===========================================================================================
+'sprawdzanie zgodności średnic z klasami materiałowymi
+'===========================================================================================
+For Each kom In Range(Cells(3, 2), Cells(r_end, 2))
+kom.Select
+
+        '==========================================================================================="MSS SP-75""MANUFACTURER STD""ASME 16.9"
+        '1. Sprawdzamy czy rodzaj trójnika jest zgodny z trójkątem połączeń
+        If InStr(Cells(kom.Row, c1).Value, "brak") = 1 Then
+        
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c1).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Brak elementu o danych średnicach w trójkącie połączeń" & Chr(10))
+            Licznik_TP = Licznik_TP + 1
+            Cells(kom.Row, 62).Value = "N.A."
+            GoTo Jump 'jeśli nie ma w trójkącie połączeń, to usuwamy i pomijamy dalsze kroki
+            
+        ElseIf InStr(Cells(kom.Row, c1).Value, "W") = 1 Then
+
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c1).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Powinien być weldolet" & Chr(10))
+            'MsgBox "Powinien być weldolet"
+            Licznik_TP = Licznik_TP + 1
+            Cells(kom.Row, 62).Value = "N.A."
+            GoTo Jump 'jeśli powinien być weldolet, to usuwamy i pomijamy dalsze kroki
+            
+        ElseIf Norma = "ASME 16.9" And InStr(Cells(kom.Row, c1).Value, "RTA") = 0 Then
+            
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c1).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Według trójkąta połączeń trójnik nie jest według ASME" & Chr(10))
+            Licznik_TP = Licznik_TP + 1
+            Cells(kom.Row, 62).Value = "N.A."
+            GoTo Jump 'jeśli jest rozbieżność
+        
+        ElseIf Norma = "MSS SP-75" And InStr(Cells(kom.Row, c1).Value, "RTM") = 0 Then
+            
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c1).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Według trójkąta połączeń trójnik nie jest według MSS" & Chr(10))
+            Licznik_TP = Licznik_TP + 1
+            Cells(kom.Row, 62).Value = "N.A."
+            GoTo Jump 'jeśli jest rozbieżność
+        
+        ElseIf Norma = "MANUFACTURER STD" And InStr(Cells(kom.Row, c1).Value, "RTV") = 0 Then
+            
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c1).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Według trójkąta połączeń trójnik nie jest według standardu wytwórcy" & Chr(10))
+            Licznik_TP = Licznik_TP + 1
+            Cells(kom.Row, 62).Value = "N.A."
+            GoTo Jump 'jeśli jest rozbieżność
+        
+        End If
+        
+              
+        '2. Sprawdzamy czy średnice trójnika znajdują się w klasach materiałowych
+        If Cells(kom.Row, c2).Value = False Then
+
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c2).Interior.Color = vbRed
+            Cells(kom.Row, 15).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Brak średnicy w klasach materiałowych" & Chr(10))
+            Licznik1 = Licznik1 + 1
+            Cells(kom.Row, 62).Value = "N.A."
+            GoTo Jump 'jeśli nie ma średnicy w klasach, to usuwamy i pomijamy dalsze kroki
+            
+        End If
+
+        '===========================================================================================
+        '3. Jeśli średnica istnieje w klasach materiałowych, sprawdzamy czy redukcja znajduje się w normach ASME 16.9 lub MSS-75-2008 lub w niestandardowych
+
+        If Cells(kom.Row, c3) = False Then
+        
+            kom.Interior.Color = vbRed
+            Cells(kom.Row, c3).Interior.Color = vbRed
+            Cells(kom.Row, 15).Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Brak średnic w normach" & Chr(10))
+            Cells(kom.Row, 62).Value = "N.A."
+            Licznik2 = Licznik2 + 1
+            GoTo Jump 'jeśli nie ma średnicy w klasach, to usuwamy i pomijamy dalsze kroki
+        End If
+        
+    
+        '===========================================================================================
+        '4. Nadajemy właściwe grubości ścianek trójnika
+        Cells(kom.Row, 25).Value = Cells(kom.Row, c6).Value / 25.4
+        Cells(kom.Row, 40).Value = Cells(kom.Row, c6).Value / 25.4
+        Cells(kom.Row, 55).Value = Cells(kom.Row, c7).Value / 25.4
+
+
+
+        '5. Sprawdzamy czy zgadza się materiał
+        If InStr(Range("S4").Value, Cells(kom.Row, 63).Value) = 0 Then
+            kom.Interior.Color = vbRed
+            On Error Resume Next
+                Cells(kom.Row, 2).AddComment
+            On Error GoTo 0
+            Cells(kom.Row, 2).Comment.Text ("Materiał niezgodny z klasą materiałową")
+            Cells(kom.Row, 63).Interior.Color = vbRed
+            Cells(kom.Row, 63).Select
+            ActiveSheet.Tab.Color = 255
+            MsgBox "Materiał niezgodny z klasą materiałową!"
+            Licznik3 = Licznik3 + 1
+        End If
+
+        
+        '===========================================================================================
+        '6. Sprawdzamy czy długości C i M w bazie planta są zgodne z normami
+    
+        If kom.Interior.Color <> vbRed Then
+               
+            'sprawdzanie zgodności długości C trójnika
+            'On Error Resume Next
+            If Abs((Replace(Cells(kom.Row, 7).Value, ".", ",") - Cells(kom.Row, c4).Value) / Replace(Cells(kom.Row, 7).Value, ".", ",")) > 0.01 Then
+            
+                'Sprawdzamy, czy wymiar z normy nie jest w milimetrach. Jeśli tak, to może się zgadać w przeliczeniu na cale
+                If Abs((Replace(Cells(kom.Row, 7).Value, ".", ",") - Cells(kom.Row, c4).Value / 25.4) / Replace(Cells(kom.Row, 7).Value, ".", ",")) > 0.01 Then
+                                
+                    'alarm przekroczenia tolerancji 1%
+                    Cells(kom.Row, 7).Interior.Color = vbYellow 'w tej kolumnie wymiary są przeliczone z mm na cale
+                    Cells(kom.Row, c4).Interior.Color = vbYellow 'w tej kolumnie wymiary są w calach - według normy
+                    Cells(kom.Row, 2).Interior.Color = vbYellow
+                    On Error Resume Next
+                        Cells(kom.Row, 2).AddComment
+                    On Error GoTo 0
+                    Cells(kom.Row, 2).Comment.Text (Cells(kom.Row, 2).Comment.Text & "Rozbieżność w długości C trójnika" & Chr(10))
+                    ActiveSheet.Tab.Color = 255
+                    Rows(kom.Row).Select
+                    'MsgBox "ERROR! Rozbieżność w długości C trójnika " & Cells(kom.Row, 2).Value
+                    Licznik4 = Licznik4 + 1
+                
+                End If
+                
+            End If
+        
+            'sprawdzanie zgodności długości M trójnika
+            'On Error Resume Next
+            If Abs((Replace(Cells(kom.Row, 9).Value, ".", ",") - Cells(kom.Row, c5).Value) / Replace(Cells(kom.Row, 9).Value, ".", ",")) > 0.01 Then
+            
+                'Sprawdzamy, czy wymiar z normy nie jest w milimetrach. Jeśli tak, to może się zgadać w przeliczeniu na cale
+                If Abs((Replace(Cells(kom.Row, 9).Value, ".", ",") - Cells(kom.Row, c5).Value / 25.4) / Replace(Cells(kom.Row, 9).Value, ".", ",")) > 0.01 Then
+                                
+                    'alarm przekroczenia tolerancji 1%
+                    Cells(kom.Row, 9).Interior.Color = vbYellow 'w tej kolumnie wymiary są przeliczone z mm na cale
+                    Cells(kom.Row, c5).Interior.Color = vbYellow 'w tej kolumnie wymiary są w calach - według normy
+                    Cells(kom.Row, 2).Interior.Color = vbYellow
+                    On Error Resume Next
+                        Cells(kom.Row, 2).AddComment
+                    On Error GoTo 0
+                    Cells(kom.Row, 2).Comment.Text (Cells(kom.Row, 2).Comment.Text & "Rozbieżność w długości M trójnika" & Chr(10))
+                    ActiveSheet.Tab.Color = 255
+                    Rows(kom.Row).Select
+                    'MsgBox "ERROR! Rozbieżność w długości M trójnika " & Cells(kom.Row, 2).Value
+                    Licznik4 = Licznik4 + 1
+                
+                End If
+                
+            End If
+        End If
+    
+        Grubości_ścianek = "THK=" & Replace(Cells(kom.Row, c6).Value, ",", ".") & " mm x " & Replace(Cells(kom.Row, c7).Value, ",", ".") & " mm"
+        Opis = "TEE (RED), " & Norma & ", " & Materiał & ", " & Grubości_ścianek
+        Cells(kom.Row, 62) = Opis
+    
+Jump:
+    
+Next kom
+
+End Sub
+
+Sub TR_wyszukaj_zakres_dla_NON_STD()
+Dim shift1 As Integer
+'Typ_kształtki = "REDUCER (CONC)"
+'Klasa_materiałowa = "20CS"
+
+'Arkusz_Główny = ThisWorkbook.Name
+'UserForm1.Show
+Workbooks(Arkusz_Główny).Activate
+
+Znalezione = False
+Opuść_for_1 = False
+Licznik5 = 0
+
+'Jeśli zmieniasz położenie tablic z kształtkami, nie zapomnij zmienić kolumny w elseif[...]
+For Each kom1 In Range(Range("BQ43"), Cells(Cells(Rows.Count, 70).End(xlUp).Row, 69)) '---------------------------------------------------pętla w trójnikach niestandardowych w poszukiwaniu danej klasy
+    kom1.Select
+    If kom1.Value = Klasa_materiałowa Then
+        If Cells(kom1.Row, 70).Value = "L1" Then
+            Opuść_for_1 = True
+            Set L1_rng_columns = Range(Cells(kom1.Row, kom1.Column + 2), Cells(kom1.Row, kom1.End(xlToRight).Column))
+            Set L1_rng_rows = Range(Cells(kom1.Row + 1, kom1.Column + 1), Cells(Cells(kom1.Row, kom1.Column + 1).End(xlDown).Row, kom1.Column + 1))
+            Set L1_rng_rows_columns = Range(Cells(kom1.Row + 1, kom1.End(xlToRight).Column), Cells(Cells(kom1.Row, kom1.Column + 1).End(xlDown).Row, kom1.Column + 2))
+            L1_rng_columns.Select
+            L1_rng_rows.Select
+            L1_rng_rows_columns.Select
+            
+            shift1 = kom1.End(xlDown).Row - kom1.Row
+            Set L3_rng_columns = Range(Cells(kom1.Row + shift1, kom1.Column + 2), Cells(kom1.Row + shift1, kom1.End(xlToRight).Column))
+            Set L3_rng_rows = Range(Cells(kom1.Row + 1 + shift1, kom1.Column + 1), Cells(Cells(kom1.Row + shift1, kom1.Column + 1).End(xlDown).Row, kom1.Column + 1))
+            Set L3_rng_rows_columns = Range(Cells(kom1.Row + 1 + shift1, kom1.End(xlToRight).Column), Cells(Cells(kom1.Row + shift1, kom1.Column + 1).End(xlDown).Row, kom1.Column + 2))
+            L3_rng_columns.Select
+            L3_rng_rows.Select
+            L3_rng_rows_columns.Select
+            
+            'sprawdzanie, czy dany zestaw średnic D1 i D2 znajduje się w bazie planta
+            For Each kom2 In L1_rng_rows_columns '--------------------------------------------------------------------------------------------pętla po zakresie średnic zwężek
+                kom2.Select
+                If kom2.Value <> "" Then
+                
+                    Znalezione = False
+                    kom2.Interior.Color = vbCyan
+                    kom2.Select
+                    D1 = Cells(kom2.Row, kom1.Column + 1).Value
+                    D2 = Cells(kom1.Row, kom2.Column).Value
+                    Workbooks(Nazwa_Arkusza).Activate
+                    Sheets(i).Activate
+
+                    For Each kom3 In Workbooks(Nazwa_Arkusza).Sheets(i).Range(Cells(3, 15), Cells(r_end, 15)) '---------------------------pętla po średnicach trójnika w arkuszu planta
+                        kom3.Select
+                        If kom3.Value = D1 Then '----------------------------D1
+                            If Workbooks(Nazwa_Arkusza).Sheets(i).Cells(kom3.Row, 45).Value = D2 Then '-----D2
+                                Znalezione = True
+                                'MsgBox "Trójnik znaleziony"
+                                Exit For
+                            End If
+                        End If
+                    Next kom3
+                    
+                    Workbooks(Arkusz_Główny).Activate
+                    
+                    If Znalezione = False Then
+                        Licznik5 = Licznik5 + 1
+                        On Error Resume Next
+                        kom2.Interior.Color = vbRed
+                        kom2.AddComment
+                        On Error GoTo 0
+                        kom2.Comment.Text ("Brak trójnika o danych średnicach w plancie - dodaj ręcznie")
+                        'MsgBox "Brak w bazie planta trójnika o kombinacji średnic " & D1 & Chr(34) & "x" & D2 & Chr(34)
+                    Else
+                        kom2.Interior.Color = xlNone
+                    End If
+                    
+                End If
+            Next kom2
+            
+        End If
+    End If
+    If Opuść_for_1 = True Then Exit For
+    If kom1.Row = 300 Then
+        Exit For
+        MsgBox "brak kształtek niestandardowych w klasie " & Klasa_materiałowa
+    End If
+    
+Next kom1
+
+Workbooks(Nazwa_Arkusza).Activate
+
+
+
+End Sub
+
+
+Sub T_R_czyszczenie_kolorów_i_treści()
+
+Element = "T_R"
+UserForm1.Show
+Nazwa_Arkusza = ""
+If Nazwa_Arkusza = "" Then Exit Sub
+Workbooks(Nazwa_Arkusza).Activate
+
+For i = 1 To Sheets.Count - 1
+    Sheets(i).Activate
+    ActiveSheet.Tab.Color = xlAutomatic
+    Sheets(i).Columns("B:CA").Interior.Color = xlNone
+    Sheets(i).Range("S3:Y1000").Clear
+    Sheets(i).Range("AH3:AI1000").Clear
+    Range("B3:B2000").ClearComments
+Next i
+
+Sheets(1).Activate
+
+End Sub
+
+Sub T_R_Wstawianie_długości()
+
+If MsgBox("Długości zapisać w calach? (jeśli nie w cale to milimetry)", vbYesNo) = vbYes Then
+    dzielnik = 25.4
+Else
+    dzielnik = 1
+End If
+
+For i = 1 To Sheets.Count - 1
+    
+    Sheets(i).Activate
+    r_end = Cells(3, 2).End(xlDown).Row
+
+    For Each kom In Range(Cells(3, 7), Cells(r_end, 7))
+        If kom.Interior.Color = vbYellow Then
+            kom.Value = Cells(kom.Row, 23).Value / dzielnik
+            Cells(kom.Row, kom.Column + 1).Value = kom.Value
+        End If
+        
+        If Cells(kom.Row, kom.Column + 2).Interior.Color = vbYellow Then
+            Cells(kom.Row, kom.Column + 2).Value = Cells(kom.Row, 24).Value / dzielnik
+            
+        End If
+        
+    Next kom
+    
+Next i
+
+End Sub
+
+Sub T_R_usuwanie_śmieci()
+Application.ScreenUpdating = False
+
+For i = 1 To Sheets.Count - 1
+    
+    Sheets(i).Activate
+    
+    For Each kom In Range(Cells(3, 2), Cells(r_end, 2))
+        If Cells(kom.Row, 62).Value = "N.A." Then
+            Cells(kom.Row, 25).Clear 'usuwanie grubości ścianki głównej
+            Cells(kom.Row, 40).Clear 'usuwanie grubości ścianki bocznej
+        End If
+    Next kom
+    
+    Range("P3:U1000").Clear
+
+Next i
+
+Sheets(1).Activate
+
+Application.ScreenUpdating = True
+End Sub
+
